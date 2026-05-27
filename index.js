@@ -975,7 +975,7 @@ GAME TIME = IST - 4H30M
 const gameTime = new Date(
 now.toLocaleString(
 'en-US',
-{ timeZone: 'Asia/Kolkata' }
+{ timeZone: 'Europe/London' }
 )
 );
 const hour =
