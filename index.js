@@ -972,7 +972,12 @@ const now = new Date();
 GAME TIME = IST - 4H30M
 */
 
-const gameTime = new Date();
+const gameTime = new Date(
+now.toLocaleString(
+'en-US',
+{ timeZone: 'Asia/Kolkata' }
+)
+);
 const hour =
 gameTime.getHours();
 
