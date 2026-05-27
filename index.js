@@ -972,10 +972,7 @@ const now = new Date();
 GAME TIME = IST - 4H30M
 */
 
-const gameTime = new Date(
-now.getTime() - (4.5 * 60 * 60 * 1000)
-);
-
+const gameTime = new Date();
 const hour =
 gameTime.getHours();
 
