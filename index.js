@@ -538,21 +538,21 @@ data.signupOpen = false;
 
 clearInterval(interval);
 
-const endEmbed =
-new EmbedBuilder()
+const finishedEmbed =
+createEmbed(
 
-.setColor(COLORS[eventName])
-
-.setDescription(
-
-`# ${TITLES[eventName]}
-
-🔴 SIGN UP ENDED BY MANAGEMENT`
+eventName,
+slots,
+data.roster,
+data.waitlist,
+0,
+'🏁 EVENT FINISHED',
+false
 );
 
 await message.edit({
 
-embeds: [endEmbed],
+embeds: [finishedEmbed],
 components: []
 });
 
@@ -560,7 +560,6 @@ activeEvents.delete(message.id);
 
 return;
 }
-
 /*
 UPDATE EMBED
 */
@@ -776,15 +775,15 @@ data.eventName
 );
 
 const endEmbed =
-new EmbedBuilder()
+createEmbed(
 
-.setColor(COLORS[data.eventName])
-
-.setDescription(
-
-`# ${TITLES[data.eventName]}
-
-🔴 SIGN UP ENDED BY MANAGEMENT`
+data.eventName,
+data.slots,
+data.roster,
+data.waitlist,
+0,
+'🔴 SIGN UP ENDED BY MANAGEMENT',
+false
 );
 
 await data.message.edit({
@@ -831,13 +830,39 @@ interaction.customId ===
 'forceremove'
 ) {
 
-await interaction.reply({
+if (data.roster.length === 0) {
+
+return interaction.reply({
 
 content:
-'Use:\n/remove @user',
+'❌ No players in roster.',
 
 flags: 64
 });
+}
+
+const removedId =
+data.roster.pop();
+
+if (
+data.waitlist.length > 0
+) {
+
+const promoted =
+data.waitlist.shift();
+
+data.roster.push(promoted);
+}
+
+sendLog(
+interaction.guild,
+interaction.user,
+'Force Removed Player',
+{ id: removedId },
+data.eventName
+);
+
+await interaction.deferUpdate();
 
 return;
 }
