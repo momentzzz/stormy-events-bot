@@ -587,7 +587,7 @@ slots,
 data.roster,
 data.waitlist,
 0,
-'🏁 EVENT FINISHED',
+'🏁 SIGN UP CLOSED OR EVENT FINISHED',
 false
 );
 
@@ -1274,7 +1274,7 @@ SIGNUP 20:30
 
 if (
 hour === 20 &&
-minute === 30
+minute === 20
 ) {
 
 createEvent(
