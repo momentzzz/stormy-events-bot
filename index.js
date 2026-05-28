@@ -164,6 +164,9 @@ FORMAT TIME
 
 function formatTime(seconds) {
 
+if (seconds < 0)
+seconds = 0;
+
 const hrs =
 Math.floor(seconds / 3600);
 
@@ -302,6 +305,35 @@ ${locked
 
 /*
 ==================================
+UPDATE MESSAGE
+==================================
+*/
+
+async function updateEventMessage(data) {
+
+if (!data || !data.message)
+return;
+
+const updatedEmbed =
+createEmbed(
+
+data.eventName,
+data.slots,
+data.roster,
+data.waitlist,
+data.timeLeft,
+data.note,
+data.locked
+);
+
+await data.message.edit({
+
+embeds: [updatedEmbed]
+}).catch(() => {});
+}
+
+/*
+==================================
 CREATE EVENT
 ==================================
 */
@@ -428,7 +460,7 @@ staffButtons
 ]
 });
 
-activeEvents.set(message.id, {
+const eventData = {
 
 eventName,
 slots,
@@ -439,7 +471,12 @@ signupOpen: true,
 locked: false,
 message,
 note
-});
+};
+
+activeEvents.set(
+message.id,
+eventData
+);
 
 /*
 ==================================
@@ -459,7 +496,11 @@ clearInterval(interval);
 return;
 }
 
-data.timeLeft--;
+/*
+5 SECOND STABLE TIMER
+*/
+
+data.timeLeft -= 5;
 
 /*
 RP TICKET LOGIC
@@ -469,13 +510,13 @@ if (
 eventName === 'rpticket'
 ) {
 
-if (data.timeLeft === 1800) {
+if (data.timeLeft <= 1800) {
 
 data.note =
 '⚠️ RP Ticket Zone Started. Hurry before XX:45.';
 }
 
-if (data.timeLeft === 900) {
+if (data.timeLeft <= 900) {
 
 data.signupOpen = false;
 
@@ -554,34 +595,20 @@ await message.edit({
 
 embeds: [finishedEmbed],
 components: []
-});
+}).catch(() => {});
 
 activeEvents.delete(message.id);
 
 return;
 }
+
 /*
 UPDATE EMBED
 */
 
-const updatedEmbed =
-createEmbed(
+await updateEventMessage(data);
 
-eventName,
-slots,
-data.roster,
-data.waitlist,
-data.timeLeft,
-data.note,
-data.locked
-);
-
-await message.edit({
-
-embeds: [updatedEmbed]
-});
-
-}, 1000);
+}, 5000);
 }
 
 /*
@@ -628,6 +655,7 @@ return interaction.reply({
 
 content:
 '❌ Signups closed.',
+
 flags: 64
 });
 }
@@ -642,6 +670,7 @@ return interaction.reply({
 
 content:
 '❌ Already signed up.',
+
 flags: 64
 });
 }
@@ -651,9 +680,18 @@ data.roster.length >=
 data.slots
 ) {
 
+if (
+!data.waitlist.includes(
+interaction.user.id
+)
+) {
+
 data.waitlist.push(
 interaction.user.id
 );
+}
+
+await updateEventMessage(data);
 
 await interaction.deferUpdate();
 
@@ -663,6 +701,8 @@ return;
 data.roster.push(
 interaction.user.id
 );
+
+await updateEventMessage(data);
 
 await interaction.deferUpdate();
 
@@ -688,6 +728,23 @@ data.waitlist.filter(
 x => x !== interaction.user.id
 );
 
+/*
+AUTO PROMOTE
+*/
+
+if (
+data.waitlist.length > 0 &&
+data.roster.length < data.slots
+) {
+
+const promoted =
+data.waitlist.shift();
+
+data.roster.push(promoted);
+}
+
+await updateEventMessage(data);
+
 await interaction.deferUpdate();
 
 return;
@@ -703,6 +760,7 @@ return interaction.reply({
 
 content:
 '❌ You cannot use this feature.',
+
 flags: 64
 });
 }
@@ -717,6 +775,8 @@ interaction.customId ===
 ) {
 
 data.locked = true;
+
+await updateEventMessage(data);
 
 sendLog(
 interaction.guild,
@@ -742,6 +802,8 @@ interaction.customId ===
 
 data.locked = false;
 
+await updateEventMessage(data);
+
 sendLog(
 interaction.guild,
 interaction.user,
@@ -766,14 +828,6 @@ interaction.customId ===
 
 data.signupOpen = false;
 
-sendLog(
-interaction.guild,
-interaction.user,
-'Ended Event',
-null,
-data.eventName
-);
-
 const endEmbed =
 createEmbed(
 
@@ -790,7 +844,15 @@ await data.message.edit({
 
 embeds: [endEmbed],
 components: []
-});
+}).catch(() => {});
+
+sendLog(
+interaction.guild,
+interaction.user,
+'Ended Event',
+null,
+data.eventName
+);
 
 activeEvents.delete(
 data.message.id
@@ -844,6 +906,10 @@ flags: 64
 const removedId =
 data.roster.pop();
 
+/*
+AUTO PROMOTE
+*/
+
 if (
 data.waitlist.length > 0
 ) {
@@ -853,6 +919,8 @@ data.waitlist.shift();
 
 data.roster.push(promoted);
 }
+
+await updateEventMessage(data);
 
 sendLog(
 interaction.guild,
@@ -924,6 +992,8 @@ latest.slots
 
 latest.waitlist.push(user.id);
 
+await updateEventMessage(latest);
+
 sendLog(
 message.guild,
 message.author,
@@ -936,6 +1006,8 @@ return;
 }
 
 latest.roster.push(user.id);
+
+await updateEventMessage(latest);
 
 sendLog(
 message.guild,
@@ -971,6 +1043,23 @@ latest.waitlist.filter(
 x => x !== user.id
 );
 
+/*
+AUTO PROMOTE
+*/
+
+if (
+latest.waitlist.length > 0 &&
+latest.roster.length < latest.slots
+) {
+
+const promoted =
+latest.waitlist.shift();
+
+latest.roster.push(promoted);
+}
+
+await updateEventMessage(latest);
+
 sendLog(
 message.guild,
 message.author,
@@ -994,7 +1083,7 @@ cron.schedule('* * * * *', () => {
 const now = new Date();
 
 /*
-GAME TIME = IST - 4H30M
+UK TIME
 */
 
 const gameTime = new Date(
@@ -1003,6 +1092,7 @@ now.toLocaleString(
 { timeZone: 'Europe/London' }
 )
 );
+
 const hour =
 gameTime.getHours();
 
@@ -1156,12 +1246,14 @@ createEvent(
 /*
 ==================================
 VINEYARD
+EVENT 20:15
+SIGNUP 19:45
 ==================================
 */
 
 if (
-hour === 12 &&
-minute === 30
+hour === 19 &&
+minute === 45
 ) {
 
 createEvent(
@@ -1175,11 +1267,13 @@ createEvent(
 /*
 ==================================
 RANKING
+EVENT 20:50
+SIGNUP 20:30
 ==================================
 */
 
 if (
-hour === 18 &&
+hour === 20 &&
 minute === 30
 ) {
 
